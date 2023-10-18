@@ -96,7 +96,8 @@ start:
 					fmt.Println("Container Pass: " + pass + "\n--------")
 				}
 			} else {
-				panic("Password Incorrect")
+				fmt.Println("Error With Archive: " + f.Name())
+				fmt.Println("ZIP Password Incorrect. Check that the provided key is correct." + "\n--------")
 			}
 
 		}
