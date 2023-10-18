@@ -1,0 +1,95 @@
+name: Build Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Compile Program
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.20.7"
+
+      - name: Compile Linux Program
+        run: |
+          ARCHS='amd64 386 arm64 arm'
+          for i in ${ARCHS}; do
+            env CGO_ENABLED=0 GOOS=linux GOARCH=${i} go build -ldflags "-s -w" -o "compile/BinUnzip-linux-${i}"
+          done
+
+      - name: Compile Windows Program
+        run: |
+          ARCHS='amd64 386'
+          for i in ${ARCHS}; do
+            env CGO_ENABLED=0 GOOS=windows GOARCH=${i} go build -ldflags "-s -w" -o "compile/BinUnzip-windows-${i}.exe"
+          done
+
+      - name: Compile Mac Program
+        run: |
+          ARCHS='amd64 arm64'
+          for i in ${ARCHS}; do
+            env CGO_ENABLED=0 GOOS=darwin GOARCH=${i} go build -ldflags "-s -w" -o "compile/BinUnzip-darwin-${i}"
+          done
+
+      - name: Save Unsigned Program
+        uses: actions/upload-artifact@v3
+        with:
+          name: unsigned-bins
+          path: compile/
+
+  sign:
+    needs: build
+    runs-on: windows-latest
+    name: Sign Agents
+
+    steps:
+      - name: Get Unsigned Agents
+        uses: actions/download-artifact@v3
+        with:
+          name: unsigned-bins
+          path: compile
+
+      - name: Sign Agents
+        uses: GabrielAcostaEngler/signtool-code-sign@main
+        with:
+          certificate: "${{ secrets.ISZLLC_CODESIGN_PFXBUNDLE_B64 }}"
+          cert-password: "${{ secrets.ISZLLC_CODESIGN_PASS }}"
+          cert-sha1: "${{ secrets.ISZLLC_CODESIGN_SHA1 }}"
+          folder: "compile"
+          recursive: true
+          timestamp-server: "http://timestamp.digicert.com"
+
+      - name: Save Signed Agents
+        uses: actions/upload-artifact@v3
+        with:
+          name: signed-programs
+          path: compile/
+
+  release:
+    needs: [sign]
+    runs-on: ubuntu-latest
+    name: Release Agents
+
+    steps:
+      - name: Get Signed Programs
+        uses: actions/download-artifact@v3
+        with:
+          name: signed-programs
+          path: bins
+  
+      - name: New Github Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{github.ref_name}}
+          name: BinUnzip-${{github.ref_name}}
+          artifacts: "bins/*"
+          allowUpdates: true
+          replacesArtifacts: true
