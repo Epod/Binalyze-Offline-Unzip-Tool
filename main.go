@@ -14,7 +14,6 @@ import (
 )
 
 var (
-	OutputFolder      = "output"
 	BinalyzeZipSecret = "binalyze.com/irec"
 )
 
@@ -23,6 +22,10 @@ func main() {
 	//Get info from user needed to decrypt zips
 	binLic := flag.String("key", "",
 		"The license key for the Binalyze instance which generated the Offline-Collector")
+	input := flag.String("input", ".",
+		"Path to folder containing zips. Defaults to scanning the same directory the program is running from")
+	output := flag.String("output", "output",
+		"Folder name or full path to write results to. Defaults to \"output\" in current directory")
 
 	flag.Parse()
 
@@ -34,16 +37,16 @@ func main() {
 	}
 
 	//Loop Through All Zip Files
-	zips, err := os.ReadDir(".")
+	zips, err := os.ReadDir(*input)
 	if err != nil {
 		panic(err)
 	}
 
 	for _, f := range zips {
-		if strings.HasSuffix(f.Name(), ".zip") {
-			uid := GetZipUID(f.Name())
+		if strings.HasSuffix(*input+f.Name(), ".zip") {
+			uid := GetZipUID(*input + f.Name())
 			pass := GenerateZipPass(uid, *binLic)
-			UnzipFile(f.Name(), pass)
+			UnzipFile(*input+f.Name(), pass, *output)
 		}
 	}
 
@@ -75,7 +78,7 @@ func GetZipUID(zipFile string) string {
 	return "unknown"
 }
 
-func UnzipFile(zipFile string, zipPassword string) {
+func UnzipFile(zipFile string, zipPassword string, OutputFolder string) {
 	archive, err := zip.OpenReader(zipFile)
 	if err != nil {
 		panic(err)
