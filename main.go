@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"flag"
 	"fmt"
 	"github.com/tidwall/gjson"
 	"github.com/yeka/zip"
@@ -15,10 +16,22 @@ import (
 var (
 	OutputFolder      = "output"
 	BinalyzeZipSecret = "binalyze.com/irec"
-	BinalyzeLicense   = "test-license"
 )
 
 func main() {
+
+	//Get info from user needed to decrypt zips
+	binLic := flag.String("license", "",
+		"The license key for the Binalyze instance which generated the Offline-Collector")
+
+	flag.Parse()
+
+	//Check for required flags - fail if missing
+	if *binLic == "" {
+		fmt.Println("Missing --license flag.\n" +
+			"Please manually enter your Binalyze license: ")
+		fmt.Scanln(binLic)
+	}
 
 	//Loop Through All Zip Files
 	zips, err := os.ReadDir(".")
@@ -29,15 +42,15 @@ func main() {
 	for _, f := range zips {
 		if strings.HasSuffix(f.Name(), ".zip") {
 			uid := GetZipUID(f.Name())
-			pass := GenerateZipPass(uid)
+			pass := GenerateZipPass(uid, *binLic)
 			UnzipFile(f.Name(), pass)
 		}
 	}
 
 }
 
-func GenerateZipPass(uid string) string {
-	s := []byte(uid + BinalyzeLicense + BinalyzeZipSecret)
+func GenerateZipPass(uid string, binLic string) string {
+	s := []byte(uid + binLic + BinalyzeZipSecret)
 	h := sha256.New()
 	h.Write([]byte(s))
 	ZipHash := hex.EncodeToString(h.Sum(nil))
