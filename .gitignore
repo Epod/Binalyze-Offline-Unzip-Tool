@@ -1,0 +1,5 @@
+.idea/
+build/
+*.zip
+.DS_Store
+output/
