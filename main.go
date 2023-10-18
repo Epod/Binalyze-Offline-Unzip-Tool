@@ -26,6 +26,9 @@ func main() {
 		"Path to folder containing zips. Defaults to scanning the same directory the program is running from")
 	output := flag.String("output", "output",
 		"Folder name or full path to write results to. Defaults to \"output\" in current directory")
+	onlyPassList := flag.Bool("passlist", false,
+		"If specified, the program will only print out the passwords for the zips. "+
+			"Useful if you need to extract the zips through other means")
 
 	flag.Parse()
 
@@ -46,7 +49,14 @@ func main() {
 		if strings.HasSuffix(*input+f.Name(), ".zip") {
 			uid := GetZipUID(*input + f.Name())
 			pass := GenerateZipPass(uid, *binLic)
-			UnzipFile(*input+f.Name(), pass, *output)
+			//Only extract zips if --passlist mode is disabled
+			if *onlyPassList == false {
+				UnzipFile(*input+f.Name(), pass, *output)
+			} else {
+				fmt.Println("\n" + "Container Name: " + f.Name())
+				fmt.Println("Container Pass: " + pass + "\n--------")
+			}
+
 		}
 	}
 
