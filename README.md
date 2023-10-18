@@ -15,6 +15,8 @@ The ZIPs require that the Binalize License Key be provided as this is a unique s
     	Folder name or full path to write results to. Defaults to "output" in current directory (default "output")
   -passlist
     	If specified, the program will only print out the passwords for the zips. Useful if you need to extract the zips through other means
+  -password string
+    	If the Offline Collector was generated with the "Encrypt Evidence" setting, provide that here.
 ```
 
 ## Instructions
@@ -30,7 +32,9 @@ There are multiple methods of passing through the license key depending on your 
 - You can pass through `-key <BinalyzeLicense>` when launching the program to avoid the need to manually enter the license key.
   - Example: `BinUnzip-windows-amd64.exe -key TEST-LICENSE`
 - Create a file named `key` in the same directory as the program. Write the Binalyze License Key to this file, the program will automatically run using this instead
-
+### Encrypt Evidence Password
+If a ***Encrypt Evidence*** password was configured when generating the Binalyze Offline Collector, you must also pass through this password via `-password`
+- Example: `BinUnzip-windows-amd64.exe -key TEST-LICENSE -password infected`
 ### Functions
 #### List ZIP Passwords
 > The following will generate the password each Binalyze Offline Collector ZIP is encrypted with, without the need to upload or communicate to any server. 

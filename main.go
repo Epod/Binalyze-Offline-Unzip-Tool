@@ -26,6 +26,8 @@ func main() {
 	binLic := flag.String("key", "",
 		"The license key for the Binalyze instance which generated the Offline-Collector.\n"+
 			"Alternatively, you can create a file named \"key\" in the same folder as this program containing this information.")
+	binEncPass := flag.String("password", "",
+		"If the Offline Collector was generated with the \"Encrypt Evidence\" setting, provide that here.")
 	input := flag.String("input", "./",
 		"Path to folder containing zips. Defaults to scanning the same directory the program is running from")
 	output := flag.String("output", "output",
@@ -85,7 +87,8 @@ start:
 	for _, f := range zips {
 		if strings.HasSuffix(*input+f.Name(), ".zip") {
 			uid := GetZipUID(*input + f.Name())
-			pass := GenerateZipPass(uid, *binLic)
+			pass := GenerateZipPass(uid, *binLic, *binEncPass)
+
 			//Test Zip Password
 			if TestZipPass(*input+f.Name(), pass) == true {
 				//Extract Zips when onlypasslist mode is disabled (the default)
@@ -126,8 +129,8 @@ func TestZipPass(zipFile string, zipPass string) bool {
 	return false
 }
 
-func GenerateZipPass(uid string, binLic string) string {
-	s := []byte(uid + binLic + BinalyzeZipSecret)
+func GenerateZipPass(uid string, binLic string, binEncPass string) string {
+	s := []byte(uid + binLic + binEncPass + BinalyzeZipSecret)
 	h := sha256.New()
 	h.Write([]byte(s))
 	ZipHash := hex.EncodeToString(h.Sum(nil))
