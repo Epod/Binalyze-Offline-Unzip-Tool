@@ -58,14 +58,12 @@ jobs:
           path: compile
 
       - name: Sign Agents
-        uses: GabrielAcostaEngler/signtool-code-sign@main
+        uses: dlemstra/code-sign-action@v1
         with:
           certificate: "${{ secrets.ISZLLC_CODESIGN_PFXBUNDLE_B64 }}"
-          cert-password: "${{ secrets.ISZLLC_CODESIGN_PASS }}"
-          cert-sha1: "${{ secrets.ISZLLC_CODESIGN_SHA1 }}"
+          password: "${{ secrets.ISZLLC_CODESIGN_PASS }}"
           folder: "compile"
           recursive: true
-          timestamp-server: "http://timestamp.digicert.com"
 
       - name: Save Signed Agents
         uses: actions/upload-artifact@v3
