@@ -21,14 +21,14 @@ var (
 func main() {
 
 	//Get info from user needed to decrypt zips
-	binLic := flag.String("license", "",
+	binLic := flag.String("key", "",
 		"The license key for the Binalyze instance which generated the Offline-Collector")
 
 	flag.Parse()
 
 	//Check for required flags - fail if missing
 	if *binLic == "" {
-		fmt.Println("Missing --license flag.\n" +
+		fmt.Println("Missing --key flag.\n" +
 			"Please manually enter your Binalyze license: ")
 		fmt.Scanln(binLic)
 	}
