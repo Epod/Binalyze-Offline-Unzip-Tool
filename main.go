@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
 	"flag"
@@ -8,7 +9,9 @@ import (
 	"github.com/tidwall/gjson"
 	"github.com/yeka/zip"
 	"io"
+	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -21,8 +24,9 @@ func main() {
 
 	//Get info from user needed to decrypt zips
 	binLic := flag.String("key", "",
-		"The license key for the Binalyze instance which generated the Offline-Collector")
-	input := flag.String("input", ".",
+		"The license key for the Binalyze instance which generated the Offline-Collector.\n"+
+			"Alternatively, you can create a file named \"key\" in the same folder as this program containing this information.")
+	input := flag.String("input", "./",
 		"Path to folder containing zips. Defaults to scanning the same directory the program is running from")
 	output := flag.String("output", "output",
 		"Folder name or full path to write results to. Defaults to \"output\" in current directory")
@@ -34,11 +38,44 @@ func main() {
 
 	//Check for required flags - fail if missing
 	if *binLic == "" {
+
+		//Check if a "key" file is present and use the content as the binLic key -
+		//Makes things more "double click and forget" friendly
+		e, _ := os.Executable()
+		exePath, _ := os.ReadDir(path.Dir(e))
+		for _, kf := range exePath {
+			if kf.Name() == "key" {
+				fmt.Println("Saved keyfile found. Using for Binalyze License Key needed for decryption")
+				keyfile, err := os.Open(path.Dir(e) + "/key")
+				if err != nil {
+					log.Fatal(err)
+				}
+				defer keyfile.Close()
+
+				//Scan for the first line only of the file. Ignore everything else
+				scanner := bufio.NewScanner(keyfile)
+				var line int
+				for scanner.Scan() {
+					if line == 0 {
+						*binLic = scanner.Text()
+						break
+					}
+				}
+				if err := scanner.Err(); err != nil {
+					log.Fatalln(err)
+				}
+				//We have everything we need now - skip the rest of this IF statement
+				goto start
+			}
+		}
+
+		//Could not find saved Key strings using any method
 		fmt.Println("Missing --key flag.\n" +
 			"Please manually enter your Binalyze license: ")
 		fmt.Scanln(binLic)
 	}
 
+start:
 	//Loop Through All Zip Files
 	zips, err := os.ReadDir(*input)
 	if err != nil {
@@ -49,17 +86,43 @@ func main() {
 		if strings.HasSuffix(*input+f.Name(), ".zip") {
 			uid := GetZipUID(*input + f.Name())
 			pass := GenerateZipPass(uid, *binLic)
-			//Only extract zips if --passlist mode is disabled
-			if *onlyPassList == false {
-				UnzipFile(*input+f.Name(), pass, *output)
+			//Test Zip Password
+			if TestZipPass(*input+f.Name(), pass) == true {
+				//Extract Zips when onlypasslist mode is disabled (the default)
+				if *onlyPassList == false {
+					UnzipFile(*input+f.Name(), pass, *output)
+				} else {
+					fmt.Println("\n" + "Container Name: " + f.Name())
+					fmt.Println("Container Pass: " + pass + "\n--------")
+				}
 			} else {
-				fmt.Println("\n" + "Container Name: " + f.Name())
-				fmt.Println("Container Pass: " + pass + "\n--------")
+				panic("Password Incorrect")
 			}
 
 		}
 	}
 
+}
+
+func TestZipPass(zipFile string, zipPass string) bool {
+	archive, err := zip.OpenReader(zipFile)
+	if err != nil {
+		panic(err)
+	}
+	defer archive.Close()
+
+	for _, f := range archive.File {
+		f.SetPassword(zipPass)
+		fileInArchive, err := f.Open()
+		if err != nil {
+			return false
+		}
+		fileInArchive.Close()
+		//No need to continue the loop if the password worked
+		return true
+	}
+
+	return false
 }
 
 func GenerateZipPass(uid string, binLic string) string {
