@@ -43,7 +43,7 @@ func init() {
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
 	rootCmd.PersistentFlags().StringP("key", "k", "",
-		"The license key for the Binalyze instance which generated the Offline-Collector.")
+		"The license key for the Binalyze instance which generated the Offline-Collector. (Required)")
 	rootCmd.PersistentFlags().StringP("password", "p", "",
 		"If the Offline Collector was generated with the \"Encrypt Evidence\" setting, provide that here.")
 	rootCmd.PersistentFlags().StringP("input", "i", "./",
@@ -52,6 +52,9 @@ func init() {
 		"Folder name or full path to write results to. Defaults to \"output\" in current directory")
 
 	cobra.OnInitialize(initConfig)
+
+	//Mark required only after Yiper config has had the chance to see if the config file loaded the binalize license key
+	rootCmd.MarkPersistentFlagRequired("key")
 
 }
 
@@ -75,6 +78,7 @@ func initConfig() {
 		//Only set the Bin License Key if there is none manually specified in the program flags entered by the user
 		if rootCmd.Flags().Lookup("key").Value.String() == "" {
 			rootCmd.PersistentFlags().Set("key", viper.GetString("BINALYZE_LICENSE_KEY"))
+
 		}
 	}
 }
