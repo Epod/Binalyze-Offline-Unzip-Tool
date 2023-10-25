@@ -13,7 +13,6 @@ var cfgFile string
 var rootCmd = &cobra.Command{
 	Use:   "bin_unzip",
 	Short: "Decrypt Binalyze Offline Collector ZIPs without the need to connect to the internet.",
-	//TODO: Replace this is relevant text
 	Long: `This application allows the interaction with Binalyze Offline Collector ZIPs in air-gaped environments.
 
 This will work entirely offline but will require manually entering information needed to generate ZIP passwords.
