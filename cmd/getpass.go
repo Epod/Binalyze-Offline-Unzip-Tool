@@ -9,6 +9,7 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -21,11 +22,11 @@ This is useful if you are looking to unzip the Binalyze Offline Collector ZIPs u
 For example:
 
 bin_unzip getpass --key BINALYZE-LICENSE-KEY
-
-bin_unzip getpass --key BINALYZE-LICENSE-KEY --input zips --output extracted`,
+bin_unzip getpass --key BINALYZE-LICENSE-KEY --csv`,
 
 	Run: func(cmd *cobra.Command, args []string) {
 		input := cmd.Flags().Lookup("input").Value.String()
+		output := cmd.Flags().Lookup("output").Value.String()
 		binLic := cmd.Flags().Lookup("key").Value.String()
 		binEncPass := cmd.Flags().Lookup("password").Value.String()
 
@@ -68,15 +69,27 @@ bin_unzip getpass --key BINALYZE-LICENSE-KEY --input zips --output extracted`,
 
 			}
 			tracker.Increment(1)
-			//bar.Increment()
 		}
 		tracker.MarkAsDone()
 		ui.FinishProgress(progressTracker)
 		fmt.Println(t.Render())
+
+		//Check and export to CSV if flag is set
+		runCSV, _ := cmd.Flags().GetBool("csv")
+		if runCSV {
+			filePath := filepath.Join(output, "zip_pass.csv")
+			os.MkdirAll(output, os.ModePerm)
+			csvFile, _ := os.Create(filePath)
+			defer csvFile.Close()
+			csvFile.WriteString(t.RenderCSV())
+		}
+
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(getpassCmd)
+
+	getpassCmd.Flags().Bool("csv", false, "Set to create a CSV containing the collected ZIP Passwords.")
 
 }
