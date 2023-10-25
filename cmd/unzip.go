@@ -1,16 +1,14 @@
-/*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
-	binzip "Binalyze-OfflineUnzip/pkg"
+	"Binalyze-OfflineUnzip/pkg"
+	"Binalyze-OfflineUnzip/pkg/ui"
 	"Binalyze-OfflineUnzip/pkg/validation"
 	"fmt"
+	"github.com/spf13/cobra"
 	"os"
 	"strings"
-
-	"github.com/spf13/cobra"
+	"time"
 )
 
 // unzipCmd represents the unzip command
@@ -32,42 +30,44 @@ unzip --key BINALYZE-LICENSE-KEY --input customzipfolder`,
 
 		fmt.Println("Extracting Binalyze Offline Collector ZIPs found within " + input + " to " + output)
 
-		zips, err := os.ReadDir(input)
+		//Get count of files in folder to attempt to extract
+		files, err := os.ReadDir(input)
 		if err != nil {
 			panic(err)
 		}
 
-		for _, f := range zips {
+		filesCount := len(files)
+
+		//Build UI Progress bar based on fileCount
+		progressTracker := ui.CreateProgress()
+
+		ui.InitiateProgress(progressTracker)
+
+		for _, f := range files {
 			if strings.HasSuffix(input+f.Name(), ".zip") {
-				uid := binzip.GetZipUID(input + f.Name())
-				pass := binzip.GenerateZipPass(uid, binLic, binEncPass)
+				uid := local.GetZipUID(input + f.Name())
+				pass := local.GenerateZipPass(uid, binLic, binEncPass)
 
 				//Test ZIP pass - run function if zip pass is good, error otherwise
+				tracker := ui.CreateTracker("Unzipping: "+f.Name(), int64(filesCount), progressTracker)
 				testPassError := validation.TestZipPass(input+f.Name(), pass)
 				if testPassError == nil {
-					binzip.UnzipFile(input+f.Name(), pass, output)
+					local.UnzipFile(input+f.Name(), pass, output, tracker)
 				} else {
-					fmt.Printf("Error: %s\n", testPassError)
-					fmt.Println("Double check the specified Binalyze License Key or Encrypt Evidence Password is correct...\n\n ")
+					tracker.UpdateMessage("Failed: " + f.Name())
+					tracker.MarkAsErrored()
+					//fmt.Printf("Error: %s\n", testPassError)
+					//fmt.Println("Double check the specified Binalyze License Key or Encrypt Evidence Password is correct...\n\n ")
 					//Failed for some reason - stop processing this ZIP and skip to the next one.
-					continue
 				}
 
 			}
 		}
+		time.Sleep(100 * time.Millisecond)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(unzipCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// unzipCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// unzipCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

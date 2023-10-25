@@ -1,9 +1,10 @@
-package binzip
+package local
 
 import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/jedib0t/go-pretty/v6/progress"
 	"github.com/tidwall/gjson"
 	"github.com/yeka/zip"
 	"io"
@@ -41,12 +42,15 @@ func GetZipUID(zipFile string) string {
 	return ""
 }
 
-func UnzipFile(zipFile string, zipPassword string, OutputFolder string) {
+func UnzipFile(zipFile string, zipPassword string, OutputFolder string, tracker *progress.Tracker) {
 	archive, err := zip.OpenReader(zipFile)
 	if err != nil {
 		panic(err)
 	}
 	defer archive.Close()
+
+	archiveFilesCount := len(archive.File)
+	tracker.UpdateTotal(int64(archiveFilesCount))
 
 	for _, f := range archive.File {
 		filePath := filepath.Join(OutputFolder, f.Name)
@@ -56,35 +60,44 @@ func UnzipFile(zipFile string, zipPassword string, OutputFolder string) {
 			f.SetPassword(zipPassword)
 		}
 
-		fmt.Println("unzipping ", filePath)
+		//fmt.Println("unzipping ", filePath)
+		tracker.UpdateMessage("Extracting File: " + f.Name)
 
 		if !strings.HasPrefix(filePath, filepath.Clean(OutputFolder)+string(os.PathSeparator)) {
-			fmt.Println("Error: Invalid output path")
+			tracker.MarkAsErrored()
 		}
+		//Create directory if the detected file is a dir
 		if f.FileInfo().IsDir() {
-			fmt.Println("Creating directory...")
 			os.MkdirAll(filePath, os.ModePerm)
 			continue
 		}
+		//Failed to make directory
 		if err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
-			fmt.Println("Error making directory to export to: " + err.Error())
+			tracker.MarkAsErrored()
 		}
 
 		dstFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+		//Could not access destination folder
 		if err != nil {
-			fmt.Println("Error accessing folder: " + err.Error())
+			tracker.MarkAsErrored()
 		}
 
 		fileInArchive, err := f.Open()
+		//Could not open the zip file
 		if err != nil {
-			fmt.Println("Error opening archive: " + err.Error())
+			tracker.MarkAsErrored()
 		}
 
+		//Error when writing file from zip
 		if _, err := io.Copy(dstFile, fileInArchive); err != nil {
-			fmt.Println("Error extracting file: " + err.Error())
+			tracker.MarkAsErrored()
 		}
 
 		dstFile.Close()
 		fileInArchive.Close()
+		tracker.Increment(1)
 	}
+
+	tracker.UpdateMessage("Success: " + zipFile)
+	tracker.MarkAsDone()
 }
