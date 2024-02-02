@@ -60,8 +60,8 @@ jobs:
       - name: Sign Agents
         uses: dlemstra/code-sign-action@v1
         with:
-          certificate: "${{ secrets.ISZLLC_CODESIGN_PFXBUNDLE_B64 }}"
-          password: "${{ secrets.ISZLLC_CODESIGN_PASS }}"
+          certificate: "${{ secrets.EPOD_CODESIGN_PFXBUNDLE_B64 }}"
+          password: "${{ secrets.EPOD_CODESIGN_PASS }}"
           folder: "compile"
           recursive: true
 
