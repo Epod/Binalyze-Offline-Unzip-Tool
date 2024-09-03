@@ -52,7 +52,7 @@ jobs:
 
     steps:
       - name: Get Unsigned Agents
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: unsigned-bins
           path: compile
@@ -79,7 +79,7 @@ jobs:
 
     steps:
       - name: Get Signed Programs
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: signed-programs
           path: bins
